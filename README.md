@@ -1,7 +1,4 @@
 # VeilNet
-<<<<<<< HEAD
-A self-hosted privacy gateway for your entire network — built on a Raspberry Pi, configured through a local web wizard, and designed to “just work” (most of the time).
-=======
 
 turns your raspberry pi into a network-wide privacy thing. ad blocking, encrypted dns, vpn, firewall, the works. theres a web wizard so you dont have to edit config files by hand.
 
@@ -139,4 +136,3 @@ open http://localhost:8080 — hardware detection returns empty stuff when youre
 ## license
 
 MIT — do whatever you want, credit is nice but i wont chase you down.
->>>>>>> d22532d (initial commit)
