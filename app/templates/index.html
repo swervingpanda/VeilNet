@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VeilNet — Privacy Gateway Setup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #0d0f12;
+  --surface:   #141720;
+  --surface2:  #1c2030;
+  --border:    #2a2f3f;
+  --border2:   #363d52;
+  --text:      #e8eaf0;
+  --muted:     #7a8099;
+  --accent:    #4f8ef7;
+  --accent-dim:#1e3a6e;
+  --green:     #3dd68c;
+  --green-dim: #0f3d25;
+  --amber:     #f5a623;
+  --amber-dim: #3d2800;
+  --red:       #f05252;
+  --red-dim:   #3d1010;
+  --radius:    10px;
+  --mono:      'IBM Plex Mono', monospace;
+  --sans:      'IBM Plex Sans', sans-serif;
+}
+
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); }
+
+/* layout stuff */
+.shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+
+header {
+  padding: 1.5rem 2rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.logo {
+  font-family: var(--mono);
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+.logo span { color: var(--accent); }
+
+.logo-badge {
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--muted);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 8px;
+}
+
+.main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 3rem 1.5rem;
+}
+
+.wizard {
+  width: 100%;
+  max-width: 680px;
+}
+
+footer {
+  padding: 1rem 2rem;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--muted);
+  font-family: var(--mono);
+  text-align: center;
+}
+
+/* progress bar */
+.progress-wrap { margin-bottom: 2.5rem; }
+
+.progress-steps {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.progress-step {
+  flex: 1;
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  transition: background 0.3s;
+}
+.progress-step.done { background: var(--green); }
+.progress-step.active { background: var(--accent); }
+
+.progress-label {
+  font-size: 12px;
+  font-family: var(--mono);
+  color: var(--muted);
+}
+.progress-label strong { color: var(--text); }
+
+/* wizard steps */
+.step { display: none; }
+.step.active { display: block; animation: fadein 0.2s ease; }
+@keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+.step-eyebrow {
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.step-title {
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 6px;
+  line-height: 1.3;
+}
+
+.step-hint {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.7;
+  margin-bottom: 1.75rem;
+}
+
+/* the hardware info bar */
+.hw-banner {
+  display: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  margin-bottom: 1.5rem;
+  font-family: var(--mono);
+  font-size: 13px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.hw-banner.visible { display: flex; }
+.hw-item { color: var(--muted); }
+.hw-item strong { color: var(--text); }
+
+/* clickable option cards */
+.opt-grid { display: grid; gap: 8px; margin-bottom: 1.5rem; }
+.opt-grid.cols2 { grid-template-columns: 1fr 1fr; }
+.opt-grid.cols3 { grid-template-columns: repeat(3, 1fr); }
+.opt-grid.cols1 { grid-template-columns: 1fr; }
+
+@media (max-width: 520px) {
+  .opt-grid.cols2, .opt-grid.cols3 { grid-template-columns: 1fr; }
+}
+
+.opt {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  user-select: none;
+}
+.opt:hover { border-color: var(--border2); background: var(--surface2); }
+.opt.selected { border-color: var(--accent); background: var(--accent-dim); }
+.opt-title { font-size: 14px; font-weight: 500; color: var(--text); }
+.opt-desc { font-size: 12px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+.opt.selected .opt-title { color: #a8c8ff; }
+.opt-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-family: var(--mono);
+  background: var(--green-dim);
+  color: var(--green);
+  border-radius: 3px;
+  padding: 1px 6px;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+/* toggle switches */
+.toggle-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 1.5rem; }
+.toggle-row {
+  display: flex;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  gap: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.toggle-row:hover { border-color: var(--border2); }
+.toggle-row.on { border-color: var(--border2); }
+.toggle-info { flex: 1; }
+.toggle-name { font-size: 14px; font-weight: 500; color: var(--text); }
+.toggle-detail { font-size: 12px; color: var(--muted); margin-top: 3px; }
+.toggle-pill {
+  width: 38px; height: 22px;
+  background: var(--border);
+  border-radius: 11px;
+  position: relative;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+.toggle-pill.on { background: var(--accent); }
+.toggle-pill::after {
+  content: '';
+  position: absolute;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--text);
+  top: 3px; left: 3px;
+  transition: transform 0.2s;
+}
+.toggle-pill.on::after { transform: translateX(16px); }
+
+/* form fields */
+.field { margin-bottom: 1rem; }
+.field-label {
+  display: block;
+  font-size: 12px;
+  font-family: var(--mono);
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.field-input, .field-select {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 14px;
+  font-family: var(--mono);
+  padding: 10px 14px;
+  transition: border-color 0.15s;
+  appearance: none;
+}
+.field-input:focus, .field-select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.field-hint { font-size: 12px; color: var(--muted); margin-top: 5px; line-height: 1.5; }
+
+.iface-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 480px) { .iface-row { grid-template-columns: 1fr; } }
+
+/* network interface picker cards */
+.iface-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 0.5rem; }
+.iface-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.iface-card:hover { border-color: var(--border2); }
+.iface-card.selected { border-color: var(--accent); background: var(--accent-dim); }
+.iface-name { font-family: var(--mono); font-size: 14px; font-weight: 500; }
+.iface-meta { font-size: 11px; color: var(--muted); margin-top: 3px; }
+.iface-ip { font-family: var(--mono); font-size: 11px; color: var(--green); }
+.iface-loading { font-size: 13px; color: var(--muted); font-family: var(--mono); padding: 8px 0; }
+
+/* info/warning boxes */
+.callout {
+  background: var(--surface);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+.callout.warn { border-color: var(--amber); }
+.callout.danger { border-color: var(--red); }
+.callout.validation-error { border-color: var(--red); background: var(--red-dim); color: var(--red); animation: fadein 0.2s ease; }
+.callout strong { color: var(--text); }
+.callout code { font-family: var(--mono); font-size: 12px; background: var(--surface2); padding: 1px 5px; border-radius: 3px; }
+
+/* buttons */
+.nav { display: flex; gap: 8px; margin-top: 2rem; }
+.btn {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 22px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border2);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn:hover { background: var(--surface2); border-color: var(--muted); }
+.btn:active { transform: scale(0.98); }
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.btn-primary:hover { background: #6fa4ff; border-color: #6fa4ff; }
+.btn-green {
+  background: var(--green);
+  border-color: var(--green);
+  color: #0a1a0f;
+}
+
+/* install progress screen */
+#screen-install { display: none; }
+#screen-install.active { display: block; }
+
+.install-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 1.5rem;
+}
+.install-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: var(--mono);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  transition: all 0.2s;
+}
+.install-step.running { border-color: var(--accent); background: var(--accent-dim); }
+.install-step.done { border-color: var(--green-dim); }
+.install-step.error { border-color: var(--red); background: var(--red-dim); }
+
+.step-icon { width: 18px; text-align: center; font-size: 12px; flex-shrink: 0; }
+.step-icon.spinner { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.install-log {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  max-height: 200px;
+  overflow-y: auto;
+  line-height: 1.8;
+  margin-bottom: 1rem;
+}
+.install-log .line-err { color: var(--red); }
+.install-log .line-ok { color: var(--green); }
+
+.done-banner {
+  display: none;
+  text-align: center;
+  padding: 2rem 1rem;
+}
+.done-banner.visible { display: block; }
+.done-icon { font-size: 48px; margin-bottom: 1rem; }
+.done-title { font-size: 22px; font-weight: 500; margin-bottom: 0.5rem; color: var(--green); }
+.done-sub { font-size: 14px; color: var(--muted); line-height: 1.7; }
+.reboot-cmd {
+  font-family: var(--mono);
+  font-size: 13px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 16px;
+  margin: 1rem auto;
+  display: inline-block;
+  color: var(--green);
+}
+
+/* review summary cards */
+.summary-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 1.5rem;
+}
+.summary-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+}
+.summary-key { font-size: 11px; font-family: var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.summary-val { font-size: 14px; font-weight: 500; color: var(--text); margin-top: 3px; }
+.summary-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.stag {
+  font-size: 11px;
+  font-family: var(--mono);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<header>
+  <div class="logo">Veil<span>Net</span></div>
+  <div class="logo-badge">Privacy Gateway Wizard</div>
+</header>
+
+<main class="main">
+<div class="wizard">
+
+  <div class="progress-wrap" id="progress-wrap">
+    <div class="progress-steps" id="progress-steps"></div>
+    <div class="progress-label" id="progress-label"></div>
+  </div>
+
+  <!-- shows what pi you have after detection -->
+  <div class="hw-banner" id="hw-banner">
+    <div class="hw-item" id="hw-pi"></div>
+    <div class="hw-item" id="hw-ram"></div>
+    <div class="hw-item" id="hw-storage"></div>
+    <div class="hw-item" id="hw-os"></div>
+  </div>
+
+  <!-- welcome screen -->
+  <div class="step active" id="step-1">
+    <div class="step-eyebrow">Welcome</div>
+    <div class="step-title">Let's set up your privacy gateway.</div>
+    <div class="step-hint">
+      VeilNet turns your Raspberry Pi into a privacy shield for every device on your network.
+      It blocks ads, encrypts your DNS, and can route all your traffic through a VPN —
+      automatically, for everything, with no software to install on your phone or laptop.<br><br>
+      This wizard will detect your hardware and walk you through the setup step by step.
+      Most questions have a recommended answer — you can just keep clicking Next.
+    </div>
+
+    <div class="callout">
+      <strong>Before you start:</strong> make sure your Raspberry Pi is connected to your network
+      and you can reach this page. That's it. The wizard handles everything else.
+    </div>
+
+    <div class="nav">
+      <button class="btn btn-primary" onclick="startDetect()">Detect my hardware →</button>
+    </div>
+  </div>
+
+  <!-- how is the pi connected -->
+  <div class="step" id="step-2">
+    <div class="step-eyebrow">Step 1 — Network</div>
+    <div class="step-title">How is your Pi connected?</div>
+    <div class="step-hint">
+      This controls how much traffic VeilNet can protect. The inline setup protects every device automatically.
+    </div>
+
+    <div class="opt-grid cols1" id="topo-opts">
+      <div class="opt" data-key="topology" data-val="inline" onclick="selectOpt(this)">
+        <div class="opt-title">Inline gateway — full protection <span class="opt-badge">recommended</span></div>
+        <div class="opt-desc">Modem → Pi → Router. Every device on your network is protected automatically. Requires a second ethernet port (USB adapter works).</div>
+      </div>
+      <div class="opt" data-key="topology" data-val="router_only" onclick="selectOpt(this)">
+        <div class="opt-title">DNS gateway — most devices</div>
+        <div class="opt-desc">Pi plugged into your router. Protects devices that use your router's DNS. Easier setup, no second ethernet port needed.</div>
+      </div>
+      <div class="opt" data-key="topology" data-val="ap_mode" onclick="selectOpt(this)">
+        <div class="opt-title">Access point — wireless devices only</div>
+        <div class="opt-desc">Pi creates its own Wi-Fi network. Only devices connected to VeilNet's Wi-Fi are protected.</div>
+      </div>
+    </div>
+
+    <!-- pick which port is wan and which is lan -->
+    <div id="iface-section" style="display:none">
+      <div class="callout">
+        Your Pi has the following network interfaces. Select which one faces your modem (WAN) and which faces your router/devices (LAN).
+      </div>
+      <div style="margin-bottom:0.75rem">
+        <div class="field-label">WAN — faces the modem / internet</div>
+        <div class="iface-cards" id="wan-cards"><div class="iface-loading">Detecting interfaces...</div></div>
+      </div>
+      <div>
+        <div class="field-label">LAN — faces your router / devices</div>
+        <div class="iface-cards" id="lan-cards"><div class="iface-loading">Detecting interfaces...</div></div>
+      </div>
+    </div>
+
+    <div class="nav">
+      <button class="btn" onclick="prevStep()">← Back</button>
+      <button class="btn btn-primary" onclick="nextStep()">Next →</button>
+    </div>
+  </div>
+
+  <!-- dns and ad blocking -->
+  <div class="step" id="step-3">
+    <div class="step-eyebrow">Step 2 — DNS & Ad Blocking</div>
+    <div class="step-title">Block ads and encrypt your DNS.</div>
+    <div class="step-hint">
+      DNS is the "phone book" your devices use to find websites. By default your internet provider can read every lookup.
+      VeilNet can block ads network-wide and make your DNS private and encrypted.
+    </div>
+
+    <div class="opt-grid cols1">
+      <div class="opt" data-key="dns" data-val="pihole_unbound_dnscrypt" onclick="selectOpt(this)">
+        <div class="opt-title">Full stack — Pi-hole + Unbound + dnscrypt-proxy <span class="opt-badge">recommended</span></div>
+        <div class="opt-desc">Ad blocking, encrypted DNS transport, and recursive resolution from root servers. Maximum privacy — your ISP never sees your DNS queries.</div>
+      </div>
+      <div class="opt" data-key="dns" data-val="pihole_unbound" onclick="selectOpt(this)">
+        <div class="opt-title">Pi-hole + Unbound</div>
+        <div class="opt-desc">Ad blocking and recursive resolution. No third-party DNS server involved at all.</div>
+      </div>
+      <div class="opt" data-key="dns" data-val="pihole_dnscrypt" onclick="selectOpt(this)">
+        <div class="opt-title">Pi-hole + dnscrypt-proxy</div>
+        <div class="opt-desc">Ad blocking plus encrypted DNS transport. Queries are encrypted but go to third-party resolvers.</div>
+      </div>
+      <div class="opt" data-key="dns" data-val="pihole_only" onclick="selectOpt(this)">
+        <div class="opt-title">Pi-hole only</div>
+        <div class="opt-desc">Ad and tracker blocking. DNS queries still go to a provider of your choice (Cloudflare, Google, etc).</div>
+      </div>
+      <div class="opt" data-key="dns" data-val="none" onclick="selectOpt(this)">
+        <div class="opt-title">No changes</div>
+        <div class="opt-desc">Keep your current DNS setup.</div>
+      </div>
+    </div>
+
+    <div class="nav">
+      <button class="btn" onclick="prevStep()">← Back</button>
+      <button class="btn btn-primary" onclick="nextStep()">Next →</button>
+    </div>
+  </div>
+
+  <!-- vpn setup -->
+  <div class="step" id="step-4">
+    <div class="step-eyebrow">Step 3 — VPN</div>
+    <div class="step-title">Route your traffic through a VPN?</div>
+    <div class="step-hint">
+      A VPN encrypts all traffic leaving your network and hides your IP address from websites and your internet provider.
+      You'll need an account with a VPN provider — we recommend Mullvad or ProtonVPN for privacy.
+    </div>
+
+    <div class="opt-grid cols2">
+      <div class="opt" data-key="vpn" data-val="mullvad" onclick="selectOpt(this)">
+        <div class="opt-title">Mullvad</div>
+        <div class="opt-desc">No-logs, no account required to sign up, WireGuard</div>
+      </div>
+      <div class="opt" data-key="vpn" data-val="proton" onclick="selectOpt(this)">
+        <div class="opt-title">ProtonVPN</div>
+        <div class="opt-desc">No-logs, open source, WireGuard</div>
+      </div>
+      <div class="opt" data-key="vpn" data-val="nordvpn" onclick="selectOpt(this)">
+        <div class="opt-title">NordVPN</div>
+        <div class="opt-desc">Large network, NordLynx/WireGuard</div>
+      </div>
+      <div class="opt" data-key="vpn" data-val="airvpn" onclick="selectOpt(this)">
+        <div class="opt-title">AirVPN</div>
+        <div class="opt-desc">Privacy-focused, OpenVPN/WireGuard</div>
+      </div>
+      <div class="opt" data-key="vpn" data-val="custom" onclick="selectOpt(this)">
+        <div class="opt-title">Other / manual</div>
+        <div class="opt-desc">Paste your WireGuard .conf file</div>
+      </div>
+      <div class="opt" data-key="vpn" data-val="none" onclick="selectOpt(this)">
+        <div class="opt-title">No VPN</div>
+        <div class="opt-desc">Skip this layer</div>
+      </div>
+    </div>
+
+    <div id="vpn-instructions" style="display:none">
+      <div class="callout warn" id="vpn-hint-text"></div>
+      <div class="field">
+        <label class="field-label">WireGuard config (paste contents of your .conf file)</label>
+        <textarea class="field-input" id="wg-config" rows="8" placeholder="[Interface]&#10;PrivateKey = ...&#10;Address = ...&#10;&#10;[Peer]&#10;PublicKey = ...&#10;Endpoint = ..."></textarea>
+        <div class="field-hint">Your private key never leaves this device. The config is written directly to /etc/wireguard/wg0.conf.</div>
+      </div>
+    </div>
+
+    <!-- ddns for people who want remote access -->
+    <div id="ddns-section" style="display:none; margin-top: 1.5rem;">
+      <div class="step-eyebrow" style="margin-bottom:8px">Dynamic DNS (optional)</div>
+      <div class="step-hint" style="margin-bottom:1rem">
+        If you want to connect back to your home network remotely (road warrior VPN), you'll need DDNS
+        so your home address stays reachable even when your ISP changes your IP.
+      </div>
+
+      <div class="toggle-list">
+        <div class="toggle-row" onclick="toggleFeature('ddns_enabled', this)">
+          <div class="toggle-info">
+            <div class="toggle-name">Enable DDNS</div>
+            <div class="toggle-detail">Automatically keeps your domain pointing at your home IP</div>
+          </div>
+          <div class="toggle-pill" id="pill-ddns_enabled"></div>
+        </div>
+      </div>
+
+      <div id="ddns-fields" style="display:none">
+        <div class="field">
+          <label class="field-label">DDNS provider</label>
+          <select class="field-select" id="ddns_provider" onchange="config.ddns_provider = this.value">
+            <option value="duckdns">DuckDNS (free)</option>
+            <option value="noip">No-IP (free tier)</option>
+            <option value="dynu">Dynu (free)</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="field-label">Your domain / hostname</label>
+          <input class="field-input" id="ddns_domain" placeholder="myhome.duckdns.org" oninput="config.ddns_domain = this.value">
+        </div>
+        <div class="field">
+          <label class="field-label">API token / password</label>
+          <input class="field-input" id="ddns_token" type="password" placeholder="••••••••••••••••" oninput="config.ddns_token = this.value">
+          <div class="field-hint">Get this from your DDNS provider's dashboard.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav">
+      <button class="btn" onclick="prevStep()">← Back</button>
+      <button class="btn btn-primary" onclick="nextStep()">Next →</button>
+    </div>
+  </div>
+
+  <!-- security toggles -->
+  <div class="step" id="step-5">
+    <div class="step-eyebrow">Step 4 — Security Hardening</div>
+    <div class="step-title">Lock down the system.</div>
+    <div class="step-hint">
+      These settings protect the Pi itself from being accessed or compromised.
+      All are recommended — turn off anything you're certain you don't need.
+    </div>
+
+    <div class="toggle-list">
+      <div class="toggle-row on" onclick="toggleFeature('ssh_hardening', this)">
+        <div class="toggle-info">
+          <div class="toggle-name">SSH hardening</div>
+          <div class="toggle-detail">Disable password login, disable root access, move SSH to port 2222</div>
+        </div>
+        <div class="toggle-pill on" id="pill-ssh_hardening"></div>
+      </div>
+      <div class="toggle-row on" onclick="toggleFeature('nftables', this)">
+        <div class="toggle-info">
+          <div class="toggle-name">nftables firewall</div>
+          <div class="toggle-detail">Strict stateful firewall — block all inbound traffic not explicitly allowed</div>
+        </div>
+        <div class="toggle-pill on" id="pill-nftables"></div>
+      </div>
+      <div class="toggle-row on" onclick="toggleFeature('fail2ban', this)">
+        <div class="toggle-info">
+          <div class="toggle-name">fail2ban</div>
+          <div class="toggle-detail">Auto-ban IPs with repeated failed login attempts</div>
+        </div>
+        <div class="toggle-pill on" id="pill-fail2ban"></div>
+      </div>
+      <div class="toggle-row on" onclick="toggleFeature('auto_updates', this)">
+        <div class="toggle-info">
+          <div class="toggle-name">Automatic security updates</div>
+          <div class="toggle-detail">Install security patches automatically — no manual apt-get needed</div>
+        </div>
+        <div class="toggle-pill on" id="pill-auto_updates"></div>
+      </div>
+    </div>
+
+    <div id="ssh-warning" class="callout warn" style="display:none">
+      <strong>Important:</strong> SSH hardening will disable password login.
+      Make sure your SSH public key is already in <code>~/.ssh/authorized_keys</code> on this Pi before continuing,
+      or you'll be locked out after reboot.
+    </div>
+
+    <div class="nav">
+      <button class="btn" onclick="prevStep()">← Back</button>
+      <button class="btn btn-primary" onclick="nextStep()">Next →</button>
+    </div>
+  </div>
+
+  <!-- monitoring and alerts -->
+  <div class="step" id="step-6">
+    <div class="step-eyebrow">Step 5 — Monitoring</div>
+    <div class="step-title">Keep an eye on things.</div>
+    <div class="step-hint">
+      Optional but useful. Grafana gives you a local dashboard showing network traffic, blocked queries, and system health.
+      Telegram alerts ping you if the VPN drops or someone's probing your SSH port.
+    </div>
+
+    <div class="toggle-list">
+      <div class="toggle-row" onclick="toggleFeature('monitoring', this)">
+        <div class="toggle-info">
+          <div class="toggle-name">Prometheus + Grafana</div>
+          <div class="toggle-detail">System metrics dashboard at http://veilnet.local:3000</div>
+        </div>
+        <div class="toggle-pill" id="pill-monitoring"></div>
+      </div>
+      <div class="toggle-row" onclick="toggleFeature('telegram_enabled', this)">
+        <div class="toggle-info">
+          <div class="toggle-name">Telegram alerts</div>
+          <div class="toggle-detail">Get notified when things go wrong</div>
+        </div>
+        <div class="toggle-pill" id="pill-telegram_enabled"></div>
+      </div>
+    </div>
+
+    <div id="telegram-fields" style="display:none">
+      <div class="callout">
+        Create a bot via <strong>@BotFather</strong> on Telegram, then get your chat ID from <strong>@userinfobot</strong>.
+      </div>
+      <div class="field">
+        <label class="field-label">Bot token (from @BotFather)</label>
+        <input class="field-input" id="telegram_token" placeholder="123456789:ABCdef..." oninput="config.telegram_token = this.value">
+      </div>
+      <div class="field">
+        <label class="field-label">Your chat ID (from @userinfobot)</label>
+        <input class="field-input" id="telegram_chat_id" placeholder="987654321" oninput="config.telegram_chat_id = this.value">
+      </div>
+    </div>
+
+    <div class="nav">
+      <button class="btn" onclick="prevStep()">← Back</button>
+      <button class="btn btn-primary" onclick="nextStep()">Next →</button>
+    </div>
+  </div>
+
+  <!-- review everything before installing -->
+  <div class="step" id="step-7">
+    <div class="step-eyebrow">Step 6 — Review</div>
+    <div class="step-title">Ready to install.</div>
+    <div class="step-hint">Review your choices below, then hit Install. This will take a few minutes — you'll see live progress.</div>
+
+    <div class="summary-grid" id="summary-grid"></div>
+
+    <div class="callout warn">
+      <strong>This will modify your system.</strong> The install is logged to <code>/var/log/veilnet-install.log</code>.
+      A reboot will be required when complete.
+    </div>
+
+    <div class="nav">
+      <button class="btn" onclick="prevStep()">← Back</button>
+      <button class="btn btn-green" onclick="startInstall()">Install VeilNet →</button>
+    </div>
+  </div>
+
+  <!-- install progress -->
+  <div id="screen-install">
+    <div class="step-eyebrow">Installing</div>
+    <div class="step-title" id="install-title">Setting things up...</div>
+    <div class="step-hint" id="install-subtitle">This will take a few minutes. Don't close this tab.</div>
+
+    <div class="install-steps" id="install-steps"></div>
+    <div class="install-log" id="install-log"></div>
+
+    <div class="done-banner" id="done-banner">
+      <div class="done-icon">✓</div>
+      <div class="done-title">VeilNet is installed.</div>
+      <div class="done-sub">
+        Reboot your Pi to activate all changes.<br>
+        Run this command in your terminal:
+      </div>
+      <div class="reboot-cmd">sudo reboot</div>
+      <div class="done-sub" style="margin-top:1rem">
+        After reboot, come back to <strong>http://veilnet.local</strong> to check your status dashboard.
+      </div>
+    </div>
+  </div>
+
+</div><!-- .wizard -->
+</main>
+
+<footer>VeilNet — runs locally on your Pi — nothing leaves your network</footer>
+</div>
+
+<script>
+// all the wizard state lives here
+const config = {
+  topology: null, vpn: 'none', dns: 'pihole_unbound_dnscrypt',
+  wan_iface: null, lan_iface: null,
+  ssh_hardening: true, nftables: true, fail2ban: true, auto_updates: true,
+  monitoring: false, telegram_enabled: false, telegram_token: '', telegram_chat_id: '',
+  ddns_enabled: false, ddns_provider: 'duckdns', ddns_domain: '', ddns_token: '',
+  wg_config: '',
+};
+let hardware = null;
+let currentStep = 1;
+let csrfToken = null;
+const TOTAL_STEPS = 7;
+const STEP_NAMES = ['Welcome', 'Network', 'DNS', 'VPN', 'Hardening', 'Monitoring', 'Review'];
+
+// get a csrf token so the server lets us post stuff
+async function fetchCSRFToken() {
+  try {
+    const res = await fetch('/api/csrf-token');
+    const data = await res.json();
+    csrfToken = data.token;
+  } catch(e) {
+    console.warn('Could not fetch CSRF token:', e);
+  }
+}
+
+// shows a red error message in the current step, goes away after 5 sec
+function showValidationError(msg) {
+  const step = document.getElementById(`step-${currentStep}`);
+  if (!step) return;
+  const existing = step.querySelector('.validation-error');
+  if (existing) existing.remove();
+
+  const el = document.createElement('div');
+  el.className = 'callout validation-error';
+  el.textContent = msg;
+  const nav = step.querySelector('.nav');
+  if (nav) nav.parentNode.insertBefore(el, nav);
+  else step.appendChild(el);
+
+  setTimeout(() => { if (el.parentNode) el.remove(); }, 5000);
+}
+
+// checks that the user actually filled in what they need to before moving on
+function validateCurrentStep() {
+  switch(currentStep) {
+    case 2: // network
+      if (!config.topology) {
+        showValidationError('Please select a network topology.');
+        return false;
+      }
+      if (config.topology === 'inline') {
+        if (!config.wan_iface) {
+          showValidationError('Please select a WAN interface.');
+          return false;
+        }
+        if (!config.lan_iface) {
+          showValidationError('Please select a LAN interface.');
+          return false;
+        }
+        if (config.wan_iface === config.lan_iface) {
+          showValidationError('WAN and LAN must be different interfaces.');
+          return false;
+        }
+      }
+      break;
+    case 4: // vpn
+      if (config.vpn !== 'none') {
+        const wgVal = document.getElementById('wg-config')?.value || '';
+        if (wgVal && !wgVal.includes('[Interface]')) {
+          showValidationError('WireGuard config must contain an [Interface] section.');
+          return false;
+        }
+      }
+      if (config.ddns_enabled) {
+        if (!config.ddns_domain) {
+          showValidationError('DDNS domain is required when DDNS is enabled.');
+          return false;
+        }
+        if (!config.ddns_token) {
+          showValidationError('DDNS token is required when DDNS is enabled.');
+          return false;
+        }
+      }
+      break;
+    case 6: // monitoring
+      if (config.telegram_enabled) {
+        if (!config.telegram_token) {
+          showValidationError('Telegram bot token is required.');
+          return false;
+        }
+        if (!config.telegram_chat_id) {
+          showValidationError('Telegram chat ID is required.');
+          return false;
+        }
+      }
+      break;
+  }
+  return true;
+}
+
+// draws the little progress bar at the top
+function renderProgress() {
+  const bar = document.getElementById('progress-steps');
+  const label = document.getElementById('progress-label');
+  bar.innerHTML = Array.from({length: TOTAL_STEPS}, (_, i) => {
+    const cls = i + 1 < currentStep ? 'done' : i + 1 === currentStep ? 'active' : '';
+    return `<div class="progress-step ${cls}"></div>`;
+  }).join('');
+  label.innerHTML = `<strong>${STEP_NAMES[currentStep-1]}</strong> — step ${currentStep} of ${TOTAL_STEPS}`;
+}
+
+// hits the api to figure out what pi this is
+async function startDetect() {
+  const btn = document.querySelector('#step-1 .btn-primary');
+  btn.textContent = 'Detecting...';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('/api/detect');
+    hardware = await res.json();
+    showHwBanner(hardware);
+    populateInterfaces(hardware.interfaces);
+  } catch(e) {
+    // if detection fails (like during dev) just keep going
+    console.warn('Hardware detection unavailable:', e);
+  }
+
+  goStep(2);
+}
+
+function showHwBanner(hw) {
+  const banner = document.getElementById('hw-banner');
+  const modelNames = {pi5:'Raspberry Pi 5', pi4:'Raspberry Pi 4', pi3:'Raspberry Pi 3', pizero2:'Pi Zero 2W', unknown:'Raspberry Pi'};
+  document.getElementById('hw-pi').innerHTML = `<strong>${modelNames[hw.pi?.model_key] || hw.pi?.model_raw || 'Pi'}</strong>`;
+  document.getElementById('hw-ram').innerHTML = `<strong>${hw.pi?.ram_gb}GB</strong> RAM`;
+  const stypes = {sd:'SD card', 'ssd-usb':'USB SSD', nvme:'NVMe SSD', unknown:'Storage'};
+  document.getElementById('hw-storage').innerHTML = `<strong>${stypes[hw.storage?.type] || 'Storage'}</strong> ${hw.storage?.size_gb ? hw.storage.size_gb+'GB' : ''}`;
+  document.getElementById('hw-os').innerHTML = `<strong>${hw.os?.id || 'Pi OS'}</strong> ${hw.os?.codename || ''}`;
+  banner.classList.add('visible');
+}
+
+function populateInterfaces(ifaces) {
+  if (!ifaces || !ifaces.length) return;
+  const typeLabel = {ethernet:'Ethernet', 'usb-ethernet':'USB Ethernet', wifi:'Wi-Fi', wireguard:'WireGuard', tunnel:'Tunnel'};
+
+  ['wan', 'lan'].forEach(role => {
+    const container = document.getElementById(`${role}-cards`);
+    container.innerHTML = '';
+    ifaces.filter(i => i.type !== 'wireguard' && i.type !== 'tunnel').forEach(iface => {
+      const card = document.createElement('div');
+      card.className = 'iface-card';
+      card.dataset.iface = iface.name;
+      card.dataset.role = role;
+      // auto-select the obvious candidates
+      if ((role === 'wan' && iface.wan_candidate) || (role === 'lan' && iface.lan_candidate)) {
+        card.classList.add('selected');
+        config[`${role}_iface`] = iface.name;
+      }
+      card.innerHTML = `
+        <div class="iface-name">${iface.name}</div>
+        <div class="iface-meta">${typeLabel[iface.type] || iface.type} · ${iface.state}</div>
+        ${iface.ip ? `<div class="iface-ip">${iface.ip}</div>` : ''}
+      `;
+      card.onclick = () => selectIface(role, iface.name, card);
+      container.appendChild(card);
+    });
+  });
+}
+
+function selectIface(role, name, el) {
+  document.querySelectorAll(`.iface-card[data-role="${role}"]`).forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  config[`${role}_iface`] = name;
+}
+
+// when you click an option card
+function selectOpt(el) {
+  const key = el.dataset.key;
+  const val = el.dataset.val;
+  document.querySelectorAll(`.opt[data-key="${key}"]`).forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  config[key] = val;
+
+  // show/hide related sections
+  if (key === 'topology') {
+    document.getElementById('iface-section').style.display = val === 'inline' ? 'block' : 'none';
+  }
+  if (key === 'vpn') {
+    const hints = {
+      mullvad: 'Go to <strong>mullvad.net/account/wireguard-config</strong> to generate a config file, then paste it below.',
+      proton: 'Go to <strong>protonvpn.com/support/wireguard-manual-macos-linux</strong> and download a WireGuard config, then paste it below.',
+      nordvpn: 'Go to <strong>nordvpn.com/servers/tools</strong>, select WireGuard, download a config, then paste it below.',
+      airvpn: 'Go to <strong>airvpn.org/generator</strong>, select WireGuard, generate and download a config, then paste it below.',
+      custom: 'Paste your WireGuard .conf file contents below.',
+    };
+    const instrEl = document.getElementById('vpn-instructions');
+    const hintEl = document.getElementById('vpn-hint-text');
+    if (val !== 'none') {
+      instrEl.style.display = 'block';
+      hintEl.innerHTML = hints[val] || hints.custom;
+      document.getElementById('ddns-section').style.display = 'block';
+    } else {
+      instrEl.style.display = 'none';
+      document.getElementById('ddns-section').style.display = 'none';
+    }
+  }
+}
+
+// flip a toggle on/off
+function toggleFeature(key, row) {
+  config[key] = !config[key];
+  const pill = document.getElementById(`pill-${key}`);
+  if (config[key]) { pill.classList.add('on'); row.classList.add('on'); }
+  else { pill.classList.remove('on'); row.classList.remove('on'); }
+
+  // show/hide related stuff
+  if (key === 'ssh_hardening') {
+    document.getElementById('ssh-warning').style.display = config[key] ? 'block' : 'none';
+  }
+  if (key === 'telegram_enabled') {
+    document.getElementById('telegram-fields').style.display = config[key] ? 'block' : 'none';
+  }
+  if (key === 'ddns_enabled') {
+    document.getElementById('ddns-fields').style.display = config[key] ? 'block' : 'none';
+  }
+}
+
+// step navigation
+function goStep(n) {
+  document.getElementById(`step-${currentStep}`)?.classList.remove('active');
+  currentStep = n;
+  document.getElementById(`step-${currentStep}`)?.classList.add('active');
+  renderProgress();
+  window.scrollTo(0, 0);
+}
+
+function nextStep() {
+  if (currentStep < TOTAL_STEPS) {
+    if (!validateCurrentStep()) return;
+    if (currentStep === TOTAL_STEPS - 1) buildSummary();
+    goStep(currentStep + 1);
+  }
+}
+function prevStep() { if (currentStep > 1) goStep(currentStep - 1); }
+
+// builds the review page with all your choices
+function buildSummary() {
+  const topoLabels = {inline:'Inline gateway (full)', router_only:'DNS gateway', ap_mode:'Access point', null:'—'};
+  const vpnLabels  = {none:'No VPN', mullvad:'Mullvad', proton:'ProtonVPN', nordvpn:'NordVPN', airvpn:'AirVPN', custom:'Custom WireGuard'};
+  const dnsLabels  = {pihole_unbound_dnscrypt:'Full stack (recommended)', pihole_unbound:'Pi-hole + Unbound', pihole_dnscrypt:'Pi-hole + dnscrypt-proxy', pihole_only:'Pi-hole only', none:'No changes'};
+
+  const extras = [];
+  if (config.ssh_hardening) extras.push('SSH hardened');
+  if (config.nftables) extras.push('nftables');
+  if (config.fail2ban) extras.push('fail2ban');
+  if (config.auto_updates) extras.push('auto-updates');
+  if (config.monitoring) extras.push('Grafana');
+  if (config.telegram_enabled) extras.push('Telegram');
+  if (config.ddns_enabled) extras.push(`DDNS (${config.ddns_provider})`);
+
+  document.getElementById('summary-grid').innerHTML = `
+    <div class="summary-card"><div class="summary-key">Network</div><div class="summary-val">${topoLabels[config.topology] || '—'}</div></div>
+    <div class="summary-card"><div class="summary-key">DNS</div><div class="summary-val">${dnsLabels[config.dns]}</div></div>
+    <div class="summary-card"><div class="summary-key">VPN</div><div class="summary-val">${vpnLabels[config.vpn]}</div></div>
+    <div class="summary-card"><div class="summary-key">Hardware</div><div class="summary-val">${hardware ? (hardware.pi?.model_raw?.replace('Raspberry ','') || 'Pi') : 'Auto-detected'}</div></div>
+    <div class="summary-card" style="grid-column:span 2">
+      <div class="summary-key">Security & extras</div>
+      <div class="summary-tags">${extras.length ? extras.map(e=>`<span class="stag">${e}</span>`).join('') : '<span class="stag">defaults only</span>'}</div>
+    </div>
+  `;
+}
+
+// the big one — sends config to the server and streams the install progress
+async function startInstall() {
+  const wgArea = document.getElementById('wg-config');
+  if (wgArea) config.wg_config = wgArea.value;
+
+  // switch to install view
+  document.getElementById('progress-wrap').style.display = 'none';
+  document.getElementById('hw-banner').style.display = 'none';
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-install').style.display = 'block';
+
+  let installSteps = [];
+  const stepsEl = document.getElementById('install-steps');
+  const logEl = document.getElementById('install-log');
+
+  try {
+    const headers = {'Content-Type': 'application/json'};
+    if (csrfToken) headers['X-CSRF-Token'] = csrfToken;
+
+    const res = await fetch('/api/install', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(config),
+    });
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    // read the sse stream chunk by chunk
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, {stream: true});
+      const parts = buffer.split('\n\n');
+      buffer = parts.pop();
+      for (const part of parts) {
+        if (!part.trim()) continue;
+        const eventMatch = part.match(/^event: (.+)/m);
+        const dataMatch  = part.match(/^data: (.+)/m);
+        if (!eventMatch || !dataMatch) continue;
+        const event = eventMatch[1].trim();
+        let data;
+        try { data = JSON.parse(dataMatch[1]); } catch { continue; }
+        handleSSE(event, data, stepsEl, logEl, installSteps);
+      }
+    }
+  } catch(e) {
+    logLine(logEl, `Connection error: ${e.message}`, 'err');
+  }
+}
+
+function handleSSE(event, data, stepsEl, logEl, installSteps) {
+  if (event === 'start') {
+    document.getElementById('install-subtitle').textContent = data.message;
+  }
+  if (event === 'step') {
+    const el = document.createElement('div');
+    el.className = 'install-step running';
+    el.id = `istep-${data.index}`;
+    el.innerHTML = `<span class="step-icon spinner">◌</span><span>${data.name}</span><span style="margin-left:auto;font-size:11px;color:var(--muted)">${data.description}</span>`;
+    stepsEl.appendChild(el);
+    el.scrollIntoView({behavior:'smooth', block:'nearest'});
+    document.getElementById('install-title').textContent = `Installing: ${data.name}`;
+  }
+  if (event === 'step_done') {
+    const el = document.getElementById(`istep-${data.index}`);
+    if (el) {
+      el.classList.remove('running');
+      el.classList.add('done');
+      el.querySelector('.step-icon').textContent = '✓';
+      el.querySelector('.step-icon').classList.remove('spinner');
+    }
+  }
+  if (event === 'output') {
+    logLine(logEl, data.line);
+  }
+  if (event === 'error') {
+    logLine(logEl, `ERROR: ${data.message}`, 'err');
+    document.getElementById('install-title').textContent = 'Installation failed';
+    document.getElementById('install-subtitle').textContent = `Failed at: ${data.step}. Check /var/log/veilnet-install.log for details.`;
+    const lastStep = stepsEl.querySelector('.running');
+    if (lastStep) { lastStep.classList.remove('running'); lastStep.classList.add('error'); lastStep.querySelector('.step-icon').textContent = '✗'; }
+  }
+  if (event === 'done') {
+    document.getElementById('install-title').textContent = 'Done!';
+    document.getElementById('install-subtitle').textContent = '';
+    document.getElementById('done-banner').classList.add('visible');
+  }
+}
+
+function logLine(el, text, cls) {
+  const line = document.createElement('div');
+  line.className = cls === 'err' ? 'line-err' : cls === 'ok' ? 'line-ok' : '';
+  line.textContent = text;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+
+// go
+renderProgress();
+fetchCSRFToken();
+</script>
+</body>
+</html>
